@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.2
+
+- **Fixed: the header button showed "模式" instead of the running mode on DSH
+  0.2.1-rc.1.** `list` reported `current: null` for a live session because
+  `agentPresets.composedPreset(agent.ctx)` can answer `undefined` even while the
+  agent actually runs a preset (its binding reads off a preset generation that a
+  re-link may leave unattached). The route now falls back to the persisted
+  reference — the last `agent-preset/selected` event in the session log — in that
+  case, the same path it already used for sessions that are not loaded. Switching
+  itself was unaffected; this only restores the label and the check mark.
+
 ## 0.1.1
 
 DSH 0.2.1-rc.1 compatibility (upstream 0.1.0 does not load on it).
