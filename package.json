@@ -1,6 +1,6 @@
 {
   "name": "dsh-preset-switcher",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "DSH web plugin: switch the current session's agent preset (mode) at any time, even after the conversation has already started - the stock UI refuses that. Provides a session-header dropdown plus a fenced /preset-switch/api route.",
   "type": "module",
   "main": "lib/index.js",
@@ -18,8 +18,19 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jeffcwj/dsh-preset-switcher.git"
+    "url": "git+https://github.com/neutronslime/dsh-preset-switcher-fork.git"
   },
+  "homepage": "https://github.com/neutronslime/dsh-preset-switcher-fork#readme",
+  "bugs": {
+    "url": "https://github.com/neutronslime/dsh-preset-switcher-fork/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "agent-preset",
+    "session"
+  ],
   "license": "MIT",
   "dsh": {
     "bundle": {

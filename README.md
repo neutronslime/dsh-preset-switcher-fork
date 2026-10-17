@@ -2,11 +2,12 @@
 
 > [English](#english) | **中文**
 
-> **Fork 说明（0.1.1）**：上游 `jeffcwj/dsh-preset-switcher` 最后提交是 2026-08-17，
-> 未适配 DSH 0.2.1-rc.1。该版本移除了宿主 `webRuntime` 服务（现在提供 `webApp`），
-> 而上游插件 `inject: ['webServer', 'webRuntime']` 因此永远不挂载、`/preset-switch/api`
-> 404，前端下拉菜单随之失效。本 fork 只做兼容修复（见 CHANGELOG.md），功能与上游一致。
-> 安装：`dsh plugin add github:<你的账号>/dsh-preset-switcher`，然后重启 DSH。
+> **Fork 说明**：上游 `jeffcwj/dsh-preset-switcher` 最后提交是 2026-08-17，未适配
+> DSH 0.2.1。该版本移除了宿主 `webRuntime` 服务（现在提供 `webApp`），而上游插件
+> `inject: ['webServer', 'webRuntime']` 因此永远不挂载、`/preset-switch/api` 404，
+> 前端下拉菜单随之失效。本 fork 只做兼容修复（见 CHANGELOG.md），功能与上游一致。
+> 已在 **DSH 0.2.1-rc.2** 上验证：插件正常挂载，`list` / `switch` / `repair` 三个方法
+> 均按预期返回。安装方式见下方「安装 / 更新」，一条 `dsh plugin add` 即可。
 
 ---
 
@@ -31,11 +32,22 @@ DSH Web 插件：在**任何时候**切换当前会话的代理预设（模式�
 
 ## 安装 / 更新
 
+需要 DSH 0.2.1-rc.2（或同代 0.2.x）。插件是纯 JavaScript，没有构建步骤，装完即用。
+
 ```powershell
-dsh plugin --profile web add C:\Users\Lenovo\.dsh\plugins\dsh-preset-switcher
-# 重启 dsh web（profile 启动时合并 cordis.patch.yml）：
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\restart-web.ps1
+# 方式一（推荐）：直接从 GitHub 仓库安装
+dsh plugin --profile web add github:neutronslime/dsh-preset-switcher-fork
+
+# 方式二：克隆到你自己选的目录，再从该目录安装（不依赖作者机器上的任何路径）
+git clone https://github.com/neutronslime/dsh-preset-switcher-fork.git
+dsh plugin --profile web add .\dsh-preset-switcher-fork
 ```
+
+安装或升级后重启 `dsh web`（profile 启动时会合并 `cordis.patch.yml`），刷新页面，
+会话标题栏右侧就会出现「当前模式 ▾」按钮。
+
+`dsh plugin` 把参数转交给 profile 目录里的 pnpm，不需要全局 npm；想自己检查打包内容，
+`npm pack --dry-run` 也可以（node 20.17+ 或 22.9+ 即可，npm 11 实测无碍）。
 
 ## 文件结构
 
@@ -44,7 +56,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\restart-web.ps1
 | `cordis.patch.yml` | Bundle 补丁：将插件行插入 profile 的 cordis 树（`dsh.bundle.patch`） |
 | `lib/index.js` | 服务端：受控 `/preset-switch/api` 路由（list / switch / repair）及会话日志修复逻辑 |
 | `lib/client.js` | 浏览器端：顶部下拉菜单（ClientModuleSystem bundle，React 通过 module-table externals） |
-| `scripts/` | `restart-web.ps1`（终止+重启+探测）、`inspect-session.mjs` / `repair-session.mjs`（独立日志工具） |
+| `scripts/` | `restart-web.ps1`（通用版重启+探测，路径自动推导）、`inspect-session.mjs` / `repair-session.mjs`（独立日志工具） |
 
 ## 许可证
 
@@ -57,6 +69,8 @@ MIT
 # dsh-preset-switcher
 
 > **English** | [中文](#概述)
+
+> **Fork note**: upstream `jeffcwj/dsh-preset-switcher` was last committed on 2026-08-17 and does not run on DSH 0.2.1: that release dropped the host `webRuntime` service (the web runtime now provides `webApp`), so the upstream `inject: ['webServer', 'webRuntime']` never mounts, `/preset-switch/api` answers 404, and the header dropdown is dead. This fork is the compatibility fix only (see CHANGELOG.md) — same features as upstream. Verified on **DSH 0.2.1-rc.2**: the plugin mounts and `list` / `switch` / `repair` all answer as expected. Install is a single `dsh plugin add`; see "Install / update" below.
 
 ---
 
@@ -78,11 +92,20 @@ Limits: only live (currently loaded) sessions can switch; subagent-owned session
 
 ## Install / update
 
+Requires DSH 0.2.1-rc.2 (or another 0.2.x build). The plugin is plain JavaScript — there is no build step.
+
 ```powershell
-dsh plugin --profile web add C:\Users\Lenovo\.dsh\plugins\dsh-preset-switcher
-# restart dsh web afterwards (profile boot merges cordis.patch.yml):
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\restart-web.ps1
+# Option 1 (recommended): install straight from the GitHub repository
+dsh plugin --profile web add github:neutronslime/dsh-preset-switcher-fork
+
+# Option 2: clone into a directory of your choosing, then install from it
+git clone https://github.com/neutronslime/dsh-preset-switcher-fork.git
+dsh plugin --profile web add .\dsh-preset-switcher-fork
 ```
+
+Restart `dsh web` after installing or upgrading (the profile boot merges `cordis.patch.yml`), reload the page, and the "当前模式 ▾" button appears in the session header.
+
+`dsh plugin` forwards to the pnpm inside the profile directory, so no global npm is needed; `npm pack --dry-run` works too if you want to inspect the tarball (node 20.17+ or 22.9+; npm 11 is fine).
 
 ## Layout
 
@@ -91,7 +114,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\restart-web.ps1
 | `cordis.patch.yml` | Bundle patch: inserts the plugin row into the profile's cordis tree (`dsh.bundle.patch`). |
 | `lib/index.js` | Host half: the fenced `/preset-switch/api` routes (list / switch / repair) and the session-log repair logic. |
 | `lib/client.js` | Browser half: the header dropdown (ClientModuleSystem bundle, React via module-table externals). |
-| `scripts/` | `restart-web.ps1` (kill + restart + probe), `inspect-session.mjs` / `repair-session.mjs` (standalone log tools). |
+| `scripts/` | `restart-web.ps1` (port-agnostic restart + probe; all paths derived at runtime), `inspect-session.mjs` / `repair-session.mjs` (standalone log tools). |
 
 ## License
 

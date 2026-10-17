@@ -2,7 +2,7 @@
 # 放到 awesome-dsh-plugin 仓库的 data/plugins/ 下，文件名必须与下面一致。
 url: https://github.com/neutronslime/dsh-preset-switcher-fork
 name: neutronslime/dsh-preset-switcher-fork
-category: ui
+category: session
 description:
-  en: 'Switch the current session''s agent preset (mode) at any time: a session-header dropdown plus a fenced /preset-switch/api route, maintained fork that loads on DSH 0.2.1-rc.1.'
-  zh: '随时切换当前会话的代理预设（模式）：会话头下拉菜单加一条受限的 /preset-switch/api 路由；本仓库是可在 DSH 0.2.1-rc.1 上加载的维护分支。'
+  en: 'Switch the current session''s agent preset (mode) at any time, including after the conversation has started: a session-header dropdown backed by a fenced /preset-switch/api route that also repairs sessions whose recorded preset was deleted. Fork of jeffcwj/dsh-preset-switcher updated for DSH 0.2.1.'
+  zh: '随时切换当前会话的代理预设（模式），对话开始之后也能切：会话头下拉菜单由受限的 /preset-switch/api 路由支撑，并会修复记录中预设已被删除的会话。jeffcwj/dsh-preset-switcher 的分支，已适配 DSH 0.2.1。'

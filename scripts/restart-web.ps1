@@ -1,82 +1,147 @@
-# Restart the dsh web server so the updated dsh-preset-switcher bundle mounts.
-# Run this SCRIPT from a DETACHED process (the dsh host it kills also hosts
-# the calling agent, so an in-tree job dies with it):
-#   Start-Process pwsh -ArgumentList '-NoProfile','-File',restart-web.ps1 -WindowStyle Hidden
+# Restart the DSH web server so a freshly installed or updated
+# dsh-preset-switcher bundle mounts again, then probe the plugin.
+#
+# Nothing here is tied to one machine: the profile name defaults to "web", the
+# port is discovered from the DSH process that is already listening (pass -Port
+# to override), `dsh` comes from PATH, and the logs are written next to this
+# script.
+#
+# Run it DETACHED - the server it stops is the one hosting the agent, so an
+# in-session run kills itself halfway through:
+#   Start-Process pwsh -ArgumentList '-NoProfile','-File',$PSCommandPath -WindowStyle Hidden
+# Running it from an ordinary terminal (outside DSH) is the simplest option.
+#
+#   .\restart-web.ps1                      # profile "web", port auto-detected
+#   .\restart-web.ps1 -Port 6862           # explicit port
+#   .\restart-web.ps1 -ProfileName work # another profile
+[CmdletBinding()]
 param(
-  [string]$Port = "5096"
+  [string]$ProfileName = "web",
+  [int]$Port = 0,
+  [int]$TimeoutSeconds = 120
 )
-$ErrorActionPreference = "Continue"
-$base = "C:\Users\Lenovo\.dsh\plugins\dsh-preset-switcher\scripts"
-$log = Join-Path $base "web-restart.log"
-$serverLog = Join-Path $base "web-server.log"
-$resultFile = Join-Path $base "web-verify-result.json"
 
-function Write-Step($msg) {
+$ErrorActionPreference = "Continue"
+$ProgressPreference = "SilentlyContinue"
+
+$log = Join-Path $PSScriptRoot "web-restart.log"
+$serverLog = Join-Path $PSScriptRoot "web-server.log"
+$resultFile = Join-Path $PSScriptRoot "web-verify-result.json"
+
+function Write-Step([string]$msg) {
   Add-Content -Path $log -Value ("[{0}] {1}" -f (Get-Date -Format "HH:mm:ss"), $msg)
 }
-Write-Step "=== restart begin (port $Port) ==="
 
-# 1. kill the old server on this port
-$conn = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue
-if ($conn) {
-  $oldPid = $conn[0].OwningProcess
-  Write-Step "killing old server pid $oldPid"
-  Stop-Process -Id $oldPid -Force -ErrorAction SilentlyContinue
-  Start-Sleep -Seconds 2
+function Get-ListeningPids([int]$p) {
+  @(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess -Unique)
+}
+
+function Find-DshPort {
+  # Prefer a listener whose process command line looks like `dsh ... --port N`.
+  $candidates = @()
+  foreach ($conn in (Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue)) {
+    $pid0 = $conn.OwningProcess
+    if (-not $pid0) { continue }
+    $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$pid0" -ErrorAction SilentlyContinue
+    if (-not $proc) { continue }
+    if ($proc.CommandLine -notmatch 'dsh') { continue }
+    $candidates += [pscustomobject]@{ Port = $conn.LocalPort; Pid = $pid0; CommandLine = $proc.CommandLine }
+  }
+  $candidates = @($candidates | Sort-Object Port -Unique)
+  if ($candidates.Count -eq 0) { return 0 }
+  if ($candidates.Count -gt 1) {
+    Write-Step ("several DSH listeners found: " + (($candidates | ForEach-Object { $_.Port }) -join ", "))
+    Write-Host "Several DSH servers are listening; pass -Port explicitly:"
+    $candidates | ForEach-Object { Write-Host ("  port {0} (pid {1})" -f $_.Port, $_.Pid) }
+    return 0
+  }
+  return [int]$candidates[0].Port
+}
+
+$dsh = Get-Command dsh -ErrorAction SilentlyContinue
+if (-not $dsh) {
+  Write-Host "dsh was not found on PATH. Install DeepSeek Harness or add its bin directory to PATH."
+  exit 1
+}
+
+if ($Port -le 0) {
+  $Port = Find-DshPort
+  if ($Port -le 0) {
+    Write-Host "Could not determine the DSH web port. Start the server once, then re-run with -Port <port>."
+    exit 1
+  }
+}
+
+Write-Step "=== restart begin (profile $ProfileName, port $Port) ==="
+
+# 1. stop whatever holds the port
+foreach ($existingPid in (Get-ListeningPids $Port)) {
+  Write-Step "stopping pid $existingPid on port $Port"
+  Stop-Process -Id $existingPid -Force -ErrorAction SilentlyContinue
 }
 for ($i = 0; $i -lt 30; $i++) {
-  if (-not (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)) { break }
+  if (-not (Get-ListeningPids $Port)) { break }
   Start-Sleep -Seconds 1
 }
 
-# 2. start the fresh server (same command the user runs)
-$dshBin = "C:\Users\Lenovo\AppData\Roaming\npm\node_modules\@deepseek-ai\dsh\lib\bin.js"
-$proc = Start-Process -FilePath "node" -ArgumentList @("$dshBin", "web", "--port", $Port) `
-  -WorkingDirectory "C:\Users\Lenovo\.dsh" `
+# 2. start the fresh server (the same command line the user would run)
+$startArgs = @("-NoProfile", "-Command", "`$ProgressPreference='SilentlyContinue'; dsh --profile $ProfileName --port $Port --no-open")
+$proc = Start-Process -FilePath "pwsh" -ArgumentList $startArgs `
   -RedirectStandardOutput $serverLog -RedirectStandardError "$serverLog.err" `
   -PassThru -WindowStyle Hidden
-Start-Sleep -Seconds 1
-$proc.Refresh()
-Write-Step "started new server pid $($proc.Id)"
+Write-Step "started dsh web (launcher pid $($proc.Id))"
 
-# 3. poll the web server until it answers
-$ok = $false
-for ($i = 0; $i -lt 90; $i++) {
-  try {
-    $r = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/" -UseBasicParsing -TimeoutSec 3
-    if ($r.StatusCode -eq 200) { $ok = $true; break }
-  } catch { }
+# 3. wait until the port answers (401/403 is fine - auth is on, the server is up)
+$up = $false
+for ($i = 0; $i -lt $TimeoutSeconds; $i++) {
+  if (Get-ListeningPids $Port) {
+    try {
+      $null = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/" -UseBasicParsing -TimeoutSec 3
+      $up = $true; break
+    } catch {
+      if ($_.Exception.Response) { $up = $true; break }
+    }
+  }
   Start-Sleep -Seconds 1
 }
-Write-Step ("web server up: " + $ok)
+Write-Step ("web server answering on port {0}: {1}" -f $Port, $up)
 
-# 4. probe the plugin artifacts
-$clientBundle = $false
-$hostRoute = $false
-$repairRoute = $false
-try {
-  $b = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/plugins/dsh-preset-switcher/client.js" -UseBasicParsing -TimeoutSec 5
-  $clientBundle = ($b.StatusCode -eq 200)
-} catch { }
-try {
-  $body = @{ method = "list" } | ConvertTo-Json -Compress
-  $h = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/preset-switch/api" -Method POST -ContentType "application/json" -Body $body -UseBasicParsing -TimeoutSec 5
-  $hostRoute = ($h.StatusCode -eq 200)
-} catch { }
-try {
-  $body = @{ method = "repair" } | ConvertTo-Json -Compress
-  $m = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/preset-switch/api" -Method POST -ContentType "application/json" -Body $body -UseBasicParsing -TimeoutSec 10
-  $repairRoute = ($m.StatusCode -eq 200)
-} catch { }
-Write-Step ("client bundle: " + $clientBundle + ", host route: " + $hostRoute + ", repair route: " + $repairRoute)
+# 4. probe the plugin's host routes
+$listOk = $false
+$repairOk = $false
+if ($up) {
+  $api = "http://127.0.0.1:$Port/preset-switch/api"
+  try {
+    $body = @{ method = "list" } | ConvertTo-Json -Compress
+    $r = Invoke-WebRequest -Uri $api -Method POST -ContentType "application/json" -Body $body -UseBasicParsing -TimeoutSec 10
+    $listOk = ($r.StatusCode -eq 200 -and $r.Content -match '"ok"\s*:\s*true')
+  } catch {}
+  try {
+    $body = @{ method = "repair" } | ConvertTo-Json -Compress
+    $r = Invoke-WebRequest -Uri $api -Method POST -ContentType "application/json" -Body $body -UseBasicParsing -TimeoutSec 30
+    $repairOk = ($r.StatusCode -eq 200 -and $r.Content -match '"ok"\s*:\s*true')
+  } catch {}
+}
+Write-Step ("plugin routes: list=$listOk repair=$repairOk")
 
+# 5. record the verdict next to this script
 $verdict = [ordered]@{
-  ok = $ok
-  clientBundle = $clientBundle
-  hostRoute = $hostRoute
-  repairRoute = $repairRoute
-  serverPid = $proc.Id
-  time = (Get-Date -Format "o")
+  ok          = ($up -and $listOk)
+  port        = $Port
+  profile     = $ProfileName
+  serverUp    = $up
+  listRoute   = $listOk
+  repairRoute = $repairOk
+  launcherPid = $proc.Id
+  time        = (Get-Date -Format "o")
+  log         = $log
+  serverLog   = $serverLog
 }
 $verdict | ConvertTo-Json | Set-Content -Path $resultFile -Encoding UTF8
 Write-Step "=== restart done ==="
+Write-Host ("DSH web: port {0}, up={1}, /preset-switch/api list={2} repair={3}" -f $Port, $up, $listOk, $repairOk)
+if (-not $listOk) {
+  Write-Host "The plugin route did not answer. Check $serverLog and $log."
+  exit 2
+}

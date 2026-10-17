@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.3
+
+Installation and metadata release; no behaviour change in the plugin itself.
+
+- **Verified on DSH 0.2.1-rc.2**: the plugin mounts and all three API methods answer
+  as expected (`list` returns the four built-in presets, `repair` reports nothing to
+  fix on a clean profile, `switch` validates its `sessionId`/`presetId` arguments).
+  No code change was needed for rc.2.
+- **Install instructions no longer assume the author's machine.** README told people
+  to `dsh plugin add C:\Users\Lenovo\.dsh\plugins\dsh-preset-switcher` and to run a
+  script that hard-coded that path and port 5096. Both install paths are now
+  machine-independent: `dsh plugin --profile web add github:neutronslime/dsh-preset-switcher-fork`,
+  or clone anywhere and `dsh plugin --profile web add .\<dir>`.
+- `scripts/restart-web.ps1` is now generic: it discovers the running DSH web port
+  (`Get-NetTCPConnection` + process command line) or takes `-Port`, resolves `dsh`
+  from PATH, restarts the server, then probes `list` and `repair` and writes
+  `web-verify-result.json` next to itself.
+- `package.json` now points `repository`/`homepage`/`bugs` at this fork instead of
+  upstream, and adds market keywords.
+
 ## 0.1.2
 
 - **Fixed: the header button showed "模式" instead of the running mode on DSH
