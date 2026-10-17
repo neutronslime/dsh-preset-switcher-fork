@@ -29,12 +29,15 @@
 4. 重启 DSH。验证插件是否真的挂载（端口用你当前的 GUI 地址）：
 
    ```powershell
+   # GET：404 = 路由不存在（插件没挂载）；405 + JSON 体 = 路由已注册
+   curl.exe -i http://127.0.0.1:<端口>/preset-switch/api
+
+   # POST：200 + {"ok":true,...} = 完全可用
    curl.exe -i -X POST http://127.0.0.1:<端口>/preset-switch/api -H "content-type: application/json" -d "{\"method\":\"list\"}"
    ```
 
-   - 返回 `405` → 路由已注册（旧的 0.1.0 是 `404`），但这个方法走的是 GET 语义检查，看到 405 就说明挂上了；
-   - 返回 JSON（`{"ok":true,...}`）→ 完全可用；
-   - 仍然 `404` → 插件没加载，看 `cordis` 加载日志。
+   注意：未知路径的 POST 也会得到 405（服务器的兜底响应），所以判定要看 **GET 是否 404**，
+   以及 POST 的响应体里有没有 `"ok":true`。
 
 ## 路线 B：npm
 
