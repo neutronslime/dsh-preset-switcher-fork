@@ -1,0 +1,12 @@
+# dsh-preset-switcher bundle patch
+#
+# This file is the `dsh.bundle.patch` layer of the package: `dsh plugin`
+# reconciles `dsh.profile.bundles` against installed packages and, seeing
+# this declaration, appends `dsh-preset-switcher` to the bundle stack. The
+# profile boot then merges this patch (a single `insert` of the plugin row)
+# into the cordis tree. The row's `name` equals the package name so the
+# client module registry matches its loader entry and serves the client
+# bundle.
+- insert:
+    - id: dsh-preset-switcher
+      name: 'dsh-preset-switcher'

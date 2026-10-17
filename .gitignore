@@ -1,0 +1,6 @@
+.opencode/
+scripts/*.log
+scripts/*.log.err
+scripts/web-restart.log
+scripts/web-verify-result.json
+scripts/launch.log
