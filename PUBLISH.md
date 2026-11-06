@@ -1,4 +1,4 @@
-# 发布 / 安装说明（0.1.3 fork）
+# 发布 / 安装说明（0.1.4 fork）
 
 本仓库已经推到 <https://github.com/neutronslime/dsh-preset-switcher-fork>（`master`，
 最新提交见 `git log -1`），并在 **DSH 0.2.1-rc.2** 上实测挂载成功。下面是三条分发路线
@@ -96,3 +96,4 @@ PR 内容只有**一个**文件：`data/plugins/neutronslime__dsh-preset-switche
 | 0.1.1 | `lib/index.js` 路由守卫 | `isTrustedApiRequest(req, scope.webRuntime.trustedHosts)` → `isTrustedApiRequest(req, [])`（宿主 web server 已统一做 Host/Origin/sec-fetch-site 校验，这里保留 loopback 检查） |
 | 0.1.2 | `lib/index.js` `list` 分支 | 活会话 `composedPreset()` 返回 `undefined` 时回退到"最后一条 `agent-preset/selected`"，修掉按钮显示"模式"而不是当前模式名的问题 |
 | 0.1.3 | README / `scripts/restart-web.ps1` / `package.json` | 安装方式去掉写死路径，脚本改成通用版；`repository`/`homepage`/`bugs` 指向本 fork；rc.2 实测通过 |
+| 0.1.4 | `lib/client.js` | 下拉菜单改为 `createPortal` 到 `<body>` + `position: fixed`（0.2.2 起标题行 `overflow: clip` + `mask-image` 会把行内绝对定位浮层裁掉） |
