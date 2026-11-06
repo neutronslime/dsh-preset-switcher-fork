@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.1.4
+
+DSH 0.2.2 compatibility: the header dropdown was clipped and never appeared.
+
+- **Fixed: the dropdown vanished on DSH 0.2.2-alpha.2 and later (including 0.2.2-rc.1).**
+  Those kernels render the Session title row inside a container that clips and fades its
+  trailing edge — `.titleCluster { overflow: clip; mask-image: linear-gradient(to left, ...) }`
+  — and the kernel documents the contract for that slot: overlays owned by
+  `conversation.session.header.actions` / `.title` must portal to stay outside the clip
+  (`@deepseek-ai/dsh-client-ui-conversation` README: "when the title and actions do not fit,
+  the title area clips them and fades its trailing edge ... overlays in the title and actions
+  slots portal to stay outside that clip"). The menu used to be an absolutely positioned child
+  of the slot, so it was clipped to the ~30px header row: only a sub-pixel sliver stayed inside
+  the clip box, and that sliver sat in the mask's transparent end, so the button looked dead
+  while `list` / `switch` / `repair` over `/preset-switch/api` kept working.
+- The menu and its backdrop now render through `createPortal(..., document.body)` with
+  `position: fixed`, anchored to the button's `getBoundingClientRect()` and re-measured while
+  open on window resize. `--dsw-alias-*` tokens still resolve because the theme defines them on
+  `<body>`. Behaviour is otherwise unchanged: same rows, same click-outside backdrop, same
+  `list` / `switch` / `repair` calls. Works on 0.2.1 too (portal is not version-gated).
+- Evidence: with the kernel's own `.titleCluster` CSS, the pre-fix tree keeps 1.8px of the menu
+  inside the clip box (visually nothing) and the portalled tree renders in full. The
+  `react-dom` module-table external used here is the same one `dsh-auto-retry` already relies on.
+
 ## 0.1.3
 
 Installation and metadata release; no behaviour change in the plugin itself.

@@ -8,6 +8,9 @@
 > 前端下拉菜单随之失效。本 fork 只做兼容修复（见 CHANGELOG.md），功能与上游一致。
 > 已在 **DSH 0.2.1-rc.2** 上验证：插件正常挂载，`list` / `switch` / `repair` 三个方法
 > 均按预期返回。安装方式见下方「安装 / 更新」，一条 `dsh plugin add` 即可。
+> 另：**DSH 0.2.2-alpha.2 起**，会话标题行会裁剪并渐隐末端（`overflow: clip` + `mask-image`），
+> 内核要求该 slot 的浮层自行 portal 出去；0.1.4 起下拉菜单改为 portal 到 `<body>` + `position: fixed`，
+> 见 CHANGELOG.md。
 
 ---
 
@@ -32,7 +35,7 @@ DSH Web 插件：在**任何时候**切换当前会话的代理预设（模式�
 
 ## 安装 / 更新
 
-需要 DSH 0.2.1-rc.2（或同代 0.2.x）。插件是纯 JavaScript，没有构建步骤，装完即用。
+需要 DSH 0.2.1-rc.2 或更新（含 0.2.2-rc.1）。插件是纯 JavaScript，没有构建步骤，装完即用。
 
 ```powershell
 # 方式一（推荐）：直接从 GitHub 仓库安装
@@ -70,7 +73,7 @@ MIT
 
 > **English** | [中文](#概述)
 
-> **Fork note**: upstream `jeffcwj/dsh-preset-switcher` was last committed on 2026-08-17 and does not run on DSH 0.2.1: that release dropped the host `webRuntime` service (the web runtime now provides `webApp`), so the upstream `inject: ['webServer', 'webRuntime']` never mounts, `/preset-switch/api` answers 404, and the header dropdown is dead. This fork is the compatibility fix only (see CHANGELOG.md) — same features as upstream. Verified on **DSH 0.2.1-rc.2**: the plugin mounts and `list` / `switch` / `repair` all answer as expected. Install is a single `dsh plugin add`; see "Install / update" below.
+> **Fork note**: upstream `jeffcwj/dsh-preset-switcher` was last committed on 2026-08-17 and does not run on DSH 0.2.1: that release dropped the host `webRuntime` service (the web runtime now provides `webApp`), so the upstream `inject: ['webServer', 'webRuntime']` never mounts, `/preset-switch/api` answers 404, and the header dropdown is dead. This fork is the compatibility fix only (see CHANGELOG.md) — same features as upstream. Verified on **DSH 0.2.1-rc.2**: the plugin mounts and `list` / `switch` / `repair` all answer as expected. Install is a single `dsh plugin add`; see "Install / update" below. Also since **DSH 0.2.2-alpha.2** the session title row clips and fades its trailing edge (`overflow: clip` + `mask-image`) and the kernel expects overlays in that slot to portal out of the clip; from 0.1.4 the dropdown portals to `<body>` with `position: fixed` — see CHANGELOG.md.
 
 ---
 
@@ -92,7 +95,7 @@ Limits: only live (currently loaded) sessions can switch; subagent-owned session
 
 ## Install / update
 
-Requires DSH 0.2.1-rc.2 (or another 0.2.x build). The plugin is plain JavaScript — there is no build step.
+Requires DSH 0.2.1-rc.2 or newer (0.2.2-rc.1 included). The plugin is plain JavaScript — there is no build step.
 
 ```powershell
 # Option 1 (recommended): install straight from the GitHub repository
