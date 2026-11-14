@@ -66,7 +66,7 @@ dsh plugin --profile web add .\dsh-preset-switcher-fork
 |------|------|
 | `cordis.patch.yml` | Bundle 补丁：将插件行插入 profile 的 cordis 树（`dsh.bundle.patch`） |
 | `lib/index.js` | 服务端：受控 `/preset-switch/api` 路由（list / switch / repair）及会话日志修复逻辑 |
-| `lib/client.js` | 浏览器端：顶部下拉菜单（ClientModuleSystem bundle，React 通过 module-table externals） |
+| `lib/client.js` | 浏览器端：顶部下拉菜单（ClientModuleSystem bundle，React/react-dom 通过 module-table externals；弹层 portal 到 document.body） |
 | `scripts/` | `restart-web.ps1`（通用版重启+探测，路径自动推导）、`inspect-session.mjs` / `repair-session.mjs`（独立日志工具） |
 
 ## 许可证
@@ -130,7 +130,7 @@ CLI-started `dsh web` and exits without killing a desktop-app port.
 |------|-------------|
 | `cordis.patch.yml` | Bundle patch: inserts the plugin row into the profile's cordis tree (`dsh.bundle.patch`). |
 | `lib/index.js` | Host half: the fenced `/preset-switch/api` routes (list / switch / repair) and the session-log repair logic. |
-| `lib/client.js` | Browser half: the header dropdown (ClientModuleSystem bundle, React via module-table externals). |
+| `lib/client.js` | Browser half: the header dropdown (ClientModuleSystem bundle, React/react-dom via module-table externals; the menu is portalled to document.body). |
 | `scripts/` | `restart-web.ps1` (port-agnostic restart + probe; all paths derived at runtime), `inspect-session.mjs` / `repair-session.mjs` (standalone log tools). |
 
 ## License

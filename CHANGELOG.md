@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.5
+
+- **Fixed: the header dropdown opened empty.** DSH 0.2.2 clips overflow on the
+  `conversation.session.header.actions` slot (its catalog states that overlays must
+  portal), so the menu — an absolutely positioned child of the trigger — was clipped
+  away even after its `list` response had arrived; the button still showed the current
+  preset name, which made the menu look like it had no entries. The menu and its click
+  backdrop now render through `react-dom`'s `createPortal` into `document.body`,
+  positioned `fixed` from the trigger's `getBoundingClientRect()` and flipped above the
+  button when there is no room below. The empty state also distinguishes "loading" from
+  a failed load instead of always saying `加载中…`.
+- Verified on **DSH 0.2.2-rc.3** in the desktop app: the menu lists
+  `standard / ptc / minimal / cordis` and a pick switches the session.
+
 ## 0.1.4
 
 DSH 0.2.2 compatibility: the persisted-session API became handle-based.
