@@ -1,7 +1,14 @@
 # Restart the DSH web server so a freshly installed or updated
 # dsh-preset-switcher bundle mounts again, then probe the plugin.
 #
-# Nothing here is tied to one machine: the profile name defaults to "web", the
+# Nothing here is tied to one machine: the profile name is read from the
+# running server's command line (pass -ProfileName to override), the port is
+# discovered from the DSH process that is already listening (pass -Port to
+# override), `dsh` comes from PATH, and the logs are written next to this
+# script.
+#
+# Only a CLI-started `dsh web` can be restarted. The desktop app owns its own
+# profile and is refused on purpose: killing it would not bring it back.
 # port is discovered from the DSH process that is already listening (pass -Port
 # to override), `dsh` comes from PATH, and the logs are written next to this
 # script.
@@ -11,12 +18,12 @@
 #   Start-Process pwsh -ArgumentList '-NoProfile','-File',$PSCommandPath -WindowStyle Hidden
 # Running it from an ordinary terminal (outside DSH) is the simplest option.
 #
-#   .\restart-web.ps1                      # profile "web", port auto-detected
+#   .\restart-web.ps1                      # profile + port auto-detected
 #   .\restart-web.ps1 -Port 6862           # explicit port
 #   .\restart-web.ps1 -ProfileName work # another profile
 [CmdletBinding()]
 param(
-  [string]$ProfileName = "web",
+  [string]$ProfileName,
   [int]$Port = 0,
   [int]$TimeoutSeconds = 120
 )
@@ -71,6 +78,24 @@ if ($Port -le 0) {
     Write-Host "Could not determine the DSH web port. Start the server once, then re-run with -Port <port>."
     exit 1
   }
+}
+
+# Identify the owner of the port before touching it: a CLI `dsh web` (has a
+# --profile argument) can be restarted here, the desktop app cannot.
+$ownerPid = @(Get-ListeningPids $Port) | Select-Object -First 1
+$ownerCmd = ""
+if ($ownerPid) {
+  $ownerProc = Get-CimInstance Win32_Process -Filter "ProcessId=$ownerPid" -ErrorAction SilentlyContinue
+  if ($ownerProc) { $ownerCmd = [string]$ownerProc.CommandLine }
+}
+if ($ownerPid -and $ownerCmd -notmatch '--profile') {
+  Write-Host ("Port {0} is served by the DeepSeek Harness desktop app (pid {1}), which manages its own profile." -f $Port, $ownerPid)
+  Write-Host "Restart the app itself; this script only restarts a CLI-started 'dsh web'."
+  exit 3
+}
+if (-not $ProfileName) {
+  $ProfileName = "web"
+  if ($ownerCmd -match '--profile\s+("?)([^\s"]+)\1') { $ProfileName = $Matches[2] }
 }
 
 Write-Step "=== restart begin (profile $ProfileName, port $Port) ==="

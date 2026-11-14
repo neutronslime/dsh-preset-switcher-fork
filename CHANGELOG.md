@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.1.4
+
+DSH 0.2.2 compatibility: the persisted-session API became handle-based.
+
+- **Fixed: switching or repairing a session that is not loaded failed.** DSH 0.2.2
+  replaced `sessionPersistence.inspect(id)` / `append(id, events)` with
+  `open(id, 'read' | 'write')`, which resolves to a `SessionHandle` (`header`,
+  `read()`, `append()`, `flush()`, `close()`). Every cold-session path called methods
+  the service no longer exposes, so `list` answered `current: null`, `switch` answered
+  `not-found` (`session "…" not found or unreadable`), and `repair` reported every
+  session as `skipped` with reason `unreadable` — and without a `sessionId`, because
+  the old `list()` meta field `.id` is now `snapshot.header.id`. Reads go through a
+  `read` handle now; deferred switches and repairs go through a short-lived `write`
+  handle that appends one `agent-preset/selected` event at the stored next-seq and
+  closes (closing a write handle is the durability barrier). Failures surface as
+  `open-failed: …` / `append-failed: …` rows instead of a silent skip.
+- **Fixed: session ids.** Persisted ids are `session-<uuid>`; the plugin now uses
+  `snapshot.header.id` verbatim instead of assuming a bare uuid.
+- **Fixed: repair target fallback.** When the configured default preset is itself
+  missing (a removed bundle), the one-click repair no longer dies with
+  `repair target preset "…" does not exist`; it falls back to `standard`, else the
+  first available preset.
+- `scripts/restart-web.ps1` now detects the profile name from the running server's
+  command line instead of assuming `web`, and refuses to kill a port served by the
+  desktop app (it manages its own profile and cannot be started from the CLI).
+- Verified end to end on **DSH 0.2.2-rc.3** against an isolated `DSH_HOME`: `list`
+  reports the stored preset, `switch` appends a deferred selection (session file
+  grows, re-read reflects it), `repair` reports `ok` for valid references and
+  `repaired` (`from` → `to`) for stale ones.
+
 ## 0.1.3
 
 Installation and metadata release; no behaviour change in the plugin itself.
